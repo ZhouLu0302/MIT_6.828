@@ -25,6 +25,25 @@ struct Pseudodesc idt_pd = {
 	sizeof(idt) - 1, (uint32_t) idt
 };
 
+void divide_isr(void);
+void debug_isr(void);
+void nmi_isr(void);
+void breakpoint_isr(void);
+void overflow_isr(void);
+void bounds_check_isr(void);
+void illegal_opcode_isr(void);
+void device_isr(void);
+void double_fault_isr(void);
+void invalid_tss_isr(void);
+void segment_not_present_isr(void);
+void stack_isr(void);
+void general_protection_fault_isr(void);
+void page_fault_isr(void);
+void floating_point_error_isr(void);
+void alignment_check_isr(void);
+void machine_check_isr(void);
+void SIMD_floating_point_error_isr(void);
+
 
 static const char *trapname(int trapno)
 {
@@ -65,6 +84,24 @@ trap_init(void)
 	extern struct Segdesc gdt[];
 
 	// LAB 3: Your code here.
+    SETGATE(idt[T_DIVIDE],  0, GD_KT, divide_isr,                    0);
+    SETGATE(idt[T_DEBUG],   0, GD_KT, debug_isr,                     0);
+    SETGATE(idt[T_NMI],     0, GD_KT, nmi_isr,                       0);
+    SETGATE(idt[T_BRKPT],   0, GD_KT, breakpoint_isr,                3);
+    SETGATE(idt[T_OFLOW],   0, GD_KT, overflow_isr,                  0);
+    SETGATE(idt[T_BOUND],   0, GD_KT, bounds_check_isr,              0);
+    SETGATE(idt[T_ILLOP],   0, GD_KT, illegal_opcode_isr,            0);
+    SETGATE(idt[T_DEVICE],  0, GD_KT, device_isr,                    0);
+    SETGATE(idt[T_DBLFLT],  0, GD_KT, double_fault_isr,              0);
+    SETGATE(idt[T_TSS],     0, GD_KT, invalid_tss_isr,               0);
+    SETGATE(idt[T_SEGNP],   0, GD_KT, segment_not_present_isr,       0);
+    SETGATE(idt[T_STACK],   0, GD_KT, stack_isr,                     0);
+    SETGATE(idt[T_GPFLT],   0, GD_KT, general_protection_fault_isr,  0);
+    SETGATE(idt[T_PGFLT],   0, GD_KT, page_fault_isr,                0);
+    SETGATE(idt[T_FPERR],   0, GD_KT, floating_point_error_isr,      0);
+    SETGATE(idt[T_ALIGN],   0, GD_KT, alignment_check_isr,           0);
+    SETGATE(idt[T_MCHK],    0, GD_KT, machine_check_isr,             0);
+    SETGATE(idt[T_SIMDERR], 0, GD_KT, SIMD_floating_point_error_isr, 0);
 
 	// Per-CPU setup 
 	trap_init_percpu();

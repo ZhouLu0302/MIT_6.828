@@ -46,10 +46,42 @@
 /*
  * Lab 3: Your code here for generating entry points for the different traps.
  */
+TRAPHANDLER_NOEC(divide_isr, T_DIVIDE)
+TRAPHANDLER_NOEC(debug_isr, T_DEBUG)
+TRAPHANDLER_NOEC(nmi_isr, T_NMI)
+TRAPHANDLER_NOEC(breakpoint_isr, T_BRKPT)
+TRAPHANDLER_NOEC(overflow_isr, T_OFLOW)
+TRAPHANDLER_NOEC(bounds_check_isr, T_BOUND)
+TRAPHANDLER_NOEC(illegal_opcode_isr, T_ILLOP)
+TRAPHANDLER_NOEC(device_isr, T_DEVICE)
+TRAPHANDLER(double_fault_isr, T_DBLFLT)
+TRAPHANDLER(invalid_tss_isr, T_TSS)
+TRAPHANDLER(segment_not_present_isr, T_SEGNP)
+TRAPHANDLER(stack_isr, T_STACK)
+TRAPHANDLER(general_protection_fault_isr, T_GPFLT)
+TRAPHANDLER(page_fault_isr, T_PGFLT)
+TRAPHANDLER(floating_point_error_isr, T_FPERR)
+TRAPHANDLER(alignment_check_isr, T_ALIGN)
+TRAPHANDLER(machine_check_isr, T_MCHK)
+TRAPHANDLER(SIMD_floating_point_error_isr, T_SIMDERR)
+
+
+
+
 
 
 
 /*
  * Lab 3: Your code here for _alltraps
  */
+_alltraps:
+pushl %ds
+pushl %es
+pushal
 
+movl $GD_KD, %eax
+movw %ax, %ds
+movw %ax, %es
+
+push %esp
+call trap
