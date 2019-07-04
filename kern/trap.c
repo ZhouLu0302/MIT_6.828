@@ -44,6 +44,7 @@ void alignment_check_isr(void);
 void machine_check_isr(void);
 void SIMD_floating_point_error_isr(void);
 
+void syscall_isr(void);
 
 static const char *trapname(int trapno)
 {
@@ -102,6 +103,7 @@ trap_init(void)
     SETGATE(idt[T_ALIGN],   0, GD_KT, alignment_check_isr,           0);
     SETGATE(idt[T_MCHK],    0, GD_KT, machine_check_isr,             0);
     SETGATE(idt[T_SIMDERR], 0, GD_KT, SIMD_floating_point_error_isr, 0);
+    SETGATE(idt[T_SYSCALL], 0, GD_KT, syscall_isr,                   3);
 
 	// Per-CPU setup 
 	trap_init_percpu();
@@ -181,15 +183,45 @@ trap_dispatch(struct Trapframe *tf)
 {
 	// Handle processor exceptions.
 	// LAB 3: Your code here.
+    // Add by Zhou
+    uint32_t trap_num = 0;
+    int32_t ret_code = 0;
 
-	// Unexpected trap: The user process or the kernel has a bug.
-	print_trapframe(tf);
-	if (tf->tf_cs == GD_KT)
-		panic("unhandled trap in kernel");
-	else {
-		env_destroy(curenv);
-		return;
-	}
+    trap_num = tf->tf_trapno;
+
+    switch(trap_num) {
+    
+    case T_PGFLT:
+        page_fault_handler(tf);
+        break;
+
+    case T_BRKPT:
+        monitor(tf);
+        break;
+
+    case T_SYSCALL:
+        ret_code = syscall(tf->tf_regs.reg_eax,
+                           tf->tf_regs.reg_edx,
+                           tf->tf_regs.reg_ecx,
+                           tf->tf_regs.reg_ebx,
+                           tf->tf_regs.reg_edi,
+                           tf->tf_regs.reg_esi);
+        tf->tf_regs.reg_eax = ret_code;
+        break;
+
+    default:
+	    // Unexpected trap: The user process or the kernel has a bug.
+	    print_trapframe(tf);
+
+	    if (tf->tf_cs == GD_KT) {
+
+		    panic("unhandled trap in kernel");
+        }else {
+		    env_destroy(curenv);
+		    return;
+	    }
+        break;
+    }
 }
 
 void
@@ -242,6 +274,11 @@ page_fault_handler(struct Trapframe *tf)
 	// Handle kernel-mode page faults.
 
 	// LAB 3: Your code here.
+    // Add by Zhou
+    if (tf->tf_cs == GD_KT) {
+    
+        panic("Page fault happends in kernal mode!\n");
+    }
 
 	// We've already handled kernel-mode exceptions, so if we get here,
 	// the page fault happened in user mode.

@@ -65,7 +65,7 @@ TRAPHANDLER(alignment_check_isr, T_ALIGN)
 TRAPHANDLER(machine_check_isr, T_MCHK)
 TRAPHANDLER(SIMD_floating_point_error_isr, T_SIMDERR)
 
-
+TRAPHANDLER_NOEC(syscall_isr, T_SYSCALL)
 
 
 
