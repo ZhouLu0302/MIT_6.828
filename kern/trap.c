@@ -144,7 +144,16 @@ trap_init_percpu(void)
 	// user space on that CPU.
 	//
 	// LAB 4: Your code here:
+    // Add by Zhou
+    thiscpu->cpu_ts.ts_esp0 = KSTACKTOP - cpunum() * (KSTKSIZE + KSTKGAP);
+    thiscpu->cpu_ts.ts_ss0 = GD_KD;
 
+	// Initialize the TSS slot of the gdt.
+    gdt[(GD_TSS0 >> 3) + cpunum()] = SEG16(STS_T32A, (uint32_t)(&thiscpu->cpu_ts),
+                                sizeof(struct Taskstate) - 1, 0);
+    gdt[(GD_TSS0 >> 3) + cpunum()].sd_s = 0;
+    
+#if 0
 	// Setup a TSS so that we get the right stack
 	// when we trap to the kernel.
 	ts.ts_esp0 = KSTACKTOP;
@@ -155,10 +164,10 @@ trap_init_percpu(void)
 	gdt[GD_TSS0 >> 3] = SEG16(STS_T32A, (uint32_t) (&ts),
 					sizeof(struct Taskstate) - 1, 0);
 	gdt[GD_TSS0 >> 3].sd_s = 0;
-
+#endif 
 	// Load the TSS selector (like other segment selectors, the
 	// bottom three bits are special; we leave them 0)
-	ltr(GD_TSS0);
+	ltr(GD_TSS0 + sizeof(struct Segdesc) * cpunum());
 
 	// Load the IDT
 	lidt(&idt_pd);
@@ -232,6 +241,7 @@ trap_dispatch(struct Trapframe *tf)
         break;
 
     case T_SYSCALL:
+        cprintf("trap file T_SYSCALL\n");
         ret_code = syscall(tf->tf_regs.reg_eax,
                            tf->tf_regs.reg_edx,
                            tf->tf_regs.reg_ecx,
@@ -239,6 +249,7 @@ trap_dispatch(struct Trapframe *tf)
                            tf->tf_regs.reg_edi,
                            tf->tf_regs.reg_esi);
         tf->tf_regs.reg_eax = ret_code;
+        return;
         break;
 
     default:
@@ -281,6 +292,7 @@ trap_dispatch(struct Trapframe *tf)
 void
 trap(struct Trapframe *tf)
 {
+    cprintf("enter function trap!\n");
 	// The environment may have set DF and some versions
 	// of GCC rely on DF being clear
 	asm volatile("cld" ::: "cc");
@@ -304,6 +316,8 @@ trap(struct Trapframe *tf)
 		// Acquire the big kernel lock before doing any
 		// serious kernel work.
 		// LAB 4: Your code here.
+        // Add by Zhou
+        lock_kernel();
 		assert(curenv);
 
 		// Garbage collect if current enviroment is a zombie
@@ -350,7 +364,7 @@ page_fault_handler(struct Trapframe *tf)
 
 	// LAB 3: Your code here.
     // Add by Zhou
-    if ((tf->tf_cs & 0x03) == 0) {
+    if (tf->tf_cs == GD_KT) {
     
         panic("Page fault happends in kernal mode, fault address: 0x%08x\n", fault_va);
     }

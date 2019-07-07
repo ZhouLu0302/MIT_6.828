@@ -567,9 +567,10 @@ env_run(struct Env *e)
 	//	e->env_tf.  Go back through the code you wrote above
 	//	and make sure you have set the relevant parts of
 	//	e->env_tf to sensible values.
-
+    
 	// LAB 3: Your code here.
     // Add by Zhou 
+    cprintf("enter function env_run\n");
     if ((curenv != NULL) && (curenv->env_status == ENV_RUNNING)) {
     
         curenv->env_status = ENV_RUNNABLE;
@@ -580,6 +581,7 @@ env_run(struct Env *e)
     curenv->env_runs++;
     lcr3(PADDR(curenv->env_pgdir));
 
+    unlock_kernel();
     env_pop_tf(&curenv->env_tf);
 
 	panic("env_run not yet implemented");
