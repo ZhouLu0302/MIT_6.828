@@ -14,6 +14,7 @@ sched_yield(void)
 	struct Env *idle;
     int index = 0;
     int i = 0;
+    bool first = true;
 
 	// Implement simple round-robin scheduling.
 	//
@@ -35,8 +36,7 @@ sched_yield(void)
     idle = thiscpu->cpu_env;
     index = (idle != NULL) ? (idle - envs) : 0;
 
-    i = index + 1;
-    for (;i != index; i = (i + 1) % NENV) {
+    for (;i != index || first; i = (i + 1) % NENV, first = false) {
     
         if (envs[i].env_status == ENV_RUNNABLE) {
         

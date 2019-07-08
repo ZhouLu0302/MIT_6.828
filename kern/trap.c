@@ -241,7 +241,6 @@ trap_dispatch(struct Trapframe *tf)
         break;
 
     case T_SYSCALL:
-        cprintf("trap file T_SYSCALL\n");
         ret_code = syscall(tf->tf_regs.reg_eax,
                            tf->tf_regs.reg_edx,
                            tf->tf_regs.reg_ecx,
@@ -292,7 +291,6 @@ trap_dispatch(struct Trapframe *tf)
 void
 trap(struct Trapframe *tf)
 {
-    cprintf("enter function trap!\n");
 	// The environment may have set DF and some versions
 	// of GCC rely on DF being clear
 	asm volatile("cld" ::: "cc");

@@ -90,7 +90,6 @@ sys_exofork(void)
     int result = 0;
     struct Env *new_env = NULL;
 
-    cprintf("enter sys exofork\n");
     result = env_alloc(&new_env, thiscpu->cpu_env->env_id);
 
     if (result)
@@ -368,8 +367,6 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
     // Add by Zhou
     int result = 0;
 
-    cprintf("syscall number: %d\n", syscallno);
-
 	switch (syscallno) {
 
     case SYS_cputs:
@@ -405,7 +402,6 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
         break;
 
     case SYS_exofork:
-        cprintf("enter function sys_exofork\n");
         result = sys_exofork();
         break;
 

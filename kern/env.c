@@ -570,7 +570,6 @@ env_run(struct Env *e)
     
 	// LAB 3: Your code here.
     // Add by Zhou 
-    cprintf("enter function env_run\n");
     if ((curenv != NULL) && (curenv->env_status == ENV_RUNNING)) {
     
         curenv->env_status = ENV_RUNNABLE;
