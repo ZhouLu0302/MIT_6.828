@@ -25,6 +25,10 @@ pgfault(struct UTrapframe *utf)
 	//   (see <inc/memlayout.h>).
 
 	// LAB 4: Your code here.
+    // Add by Zhou
+    if (!((err & FEC_WR) && (uvpd[PDX(addr)] & PTE_P) \
+        && (uvpt[PGNUM(addr)] & PTE_P) && (uvpt[PGNUM(addr)] & PTE_COW)))
+        panic("page cow check failed!\n");
 
 	// Allocate a new page, map it at a temporary location (PFTEMP),
 	// copy the data from the old page to the new page, then move the new
@@ -33,11 +37,23 @@ pgfault(struct UTrapframe *utf)
 	//   You should make three system calls.
 
 	// LAB 4: Your code here.
+    // Add by Zhou
+    addr = ROUNDDOWN(addr, PGSIZE);
+    envid_t envid = sys_getenvid();
 
-	panic("pgfault not implemented");
+    if ((r = sys_page_alloc(envid, PFTEMP, PTE_P | PTE_W | PTE_U)))
+        panic("sys_page_alloc failed!\n");
+
+    memmove(PFTEMP, addr, PGSIZE);
+
+    if ((r = sys_page_map(envid, PFTEMP, envid, addr, PTE_P | PTE_U | PTE_W)))
+        panic("sys_page_map failed!\n");
+
+    if ((r = sys_page_unmap(envid, PFTEMP)))
+        panic("sys_page_unmap failed!\n");
 }
 
-//
+//failed
 // Map our virtual page pn (address pn*PGSIZE) into the target envid
 // at the same virtual address.  If the page is writable or copy-on-write,
 // the new mapping must be created copy-on-write, and then our mapping must be
@@ -54,8 +70,25 @@ duppage(envid_t envid, unsigned pn)
 	int r;
 
 	// LAB 4: Your code here.
-	panic("duppage not implemented");
-	return 0;
+    // Add by Zhou
+    envid_t myenvid = sys_getenvid();
+    void *addr = (void *)(pn * PGSIZE);
+    pte_t pte = uvpt[pn];
+    int perm = PTE_U | PTE_P;
+
+    if ((pte & PTE_W) || (pte & PTE_COW))
+        perm |= PTE_COW;
+
+    // map to envid VA
+    r = sys_page_map(myenvid, addr, envid, addr, perm);
+
+    if ((!r) && (perm & PTE_COW)) {
+    
+        // map itself
+        r = sys_page_map(myenvid, addr, myenvid, addr, perm);
+    }
+
+    return r;
 }
 
 //
