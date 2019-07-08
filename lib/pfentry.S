@@ -60,23 +60,38 @@ _pgfault_upcall:
 	//   blank word that the kernel reserved for us.
 	//
 	// Throughout the remaining code, think carefully about what
-	// registers are available for intermediate calculations.  You
+	// registers are available for intermediate calculations.  You 
 	// may find that you have to rearrange your code in non-obvious
 	// ways as registers become unavailable as scratch space.
 	//
 	// LAB 4: Your code here.
+    // Add by Zhou
+    movl 0x28(%esp), %ebx   # trap-time eip
+    subl $0x04, 0x30(%esp)  # trap-time esp minus 4
+    movl 0x30(%esp), %eax
+    movl %ebx, (%eax)       # trap-time esp minus 4 store trap-time eip
 
 	// Restore the trap-time registers.  After you do this, you
 	// can no longer modify any general-purpose registers.
 	// LAB 4: Your code here.
+    // Add by Zhou
+    addl $0x08, %esp
+    popal                   # pop all the common register value to the registers
 
 	// Restore eflags from the stack.  After you do this, you can
 	// no longer use arithmetic operations or anything else that
 	// modifies eflags.
 	// LAB 4: Your code here.
+    // Add by Zhou
+    addl $0x04, %esp
+    popfl                   # set eflags
 
 	// Switch back to the adjusted trap-time stack.
 	// LAB 4: Your code here.
+    // Add by Zhou
+    popl %esp
 
 	// Return to re-execute the instruction that faulted.
 	// LAB 4: Your code here.
+    // Add by Zhou
+    ret

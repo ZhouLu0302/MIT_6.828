@@ -362,7 +362,7 @@ page_fault_handler(struct Trapframe *tf)
 
 	// LAB 3: Your code here.
     // Add by Zhou
-    if (tf->tf_cs == GD_KT) {
+    if ((tf->tf_cs & 0x03) == 0) {
     
         panic("Page fault happends in kernal mode, fault address: 0x%08x\n", fault_va);
     }
@@ -400,7 +400,37 @@ page_fault_handler(struct Trapframe *tf)
 	//   (the 'tf' variable points at 'curenv->env_tf').
 
 	// LAB 4: Your code here.
+    // Add by Zhou
+    uintptr_t exstack;
+    struct UTrapframe *utf = NULL;
 
+    if (!curenv->env_pgfault_upcall)
+        goto destroy;
+
+    // Page fault upcall cause another page fault
+    if ((tf->tf_esp >= (UXSTACKTOP - PGSIZE)) && (tf->tf_esp <= (UXSTACKTOP - 1)))
+        exstack = (tf->tf_esp - sizeof(struct UTrapframe) - 4);
+    else
+        exstack = UXSTACKTOP - sizeof(struct UTrapframe);
+
+    utf = (struct UTrapframe *)exstack;
+    utf->utf_fault_va = fault_va;
+    utf->utf_err = tf->tf_err;
+    utf->utf_regs = tf->tf_regs;
+    utf->utf_eip = tf->tf_eip;
+    utf->utf_eflags = tf->tf_eflags;
+    utf->utf_esp = tf->tf_esp;
+
+    user_mem_check(curenv, (void *)exstack, sizeof(struct UTrapframe), PTE_U | PTE_W | PTE_P);
+
+    tf->tf_esp = (uintptr_t)utf;
+    tf->tf_eip = (uintptr_t)curenv->env_pgfault_upcall;
+
+    env_run(curenv);
+
+    panic("Unreachable code!\n");
+
+destroy:
 	// Destroy the environment that caused the fault.
 	cprintf("[%08x] user fault va %08x ip %08x\n",
 		curenv->env_id, fault_va, tf->tf_eip);
