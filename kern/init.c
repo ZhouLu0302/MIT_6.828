@@ -27,6 +27,10 @@ i386_init(void)
 
 	cprintf("6828 decimal is %o octal!\n", 6828);
 
+    extern unsigned char end[];
+
+    cprintf("end addr: 0x%08x\n", end);
+
 	// Lab 2 memory management initialization functions
 	mem_init();
 
@@ -55,7 +59,8 @@ i386_init(void)
 #else
 	// Touch all you want.
 	//ENV_CREATE(user_primes, ENV_TYPE_USER);
-	ENV_CREATE(user_dumbfork, ENV_TYPE_USER);
+	ENV_CREATE(user_forktree, ENV_TYPE_USER);
+	//ENV_CREATE(user_dumbfork, ENV_TYPE_USER);
 #endif // TEST*
 
 	// Schedule and run the first user environment!

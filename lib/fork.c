@@ -67,7 +67,7 @@ pgfault(struct UTrapframe *utf)
 static int
 duppage(envid_t envid, unsigned pn)
 {
-	int r;
+	int r = 0;
 
 	// LAB 4: Your code here.
     // Add by Zhou
@@ -80,15 +80,16 @@ duppage(envid_t envid, unsigned pn)
         perm |= PTE_COW;
 
     // map to envid VA
-    r = sys_page_map(myenvid, addr, envid, addr, perm);
+    if ((r = sys_page_map(myenvid, addr, envid, addr, perm)))
+        return r;
 
-    if ((!r) && (perm & PTE_COW)) {
+    if (perm & PTE_COW) {
     
-        // map itself
-        r = sys_page_map(myenvid, addr, myenvid, addr, perm);
+        if ((r = sys_page_map(myenvid, addr, myenvid, addr, perm)))
+            return r;
     }
 
-    return r;
+    return 0;
 }
 
 //
@@ -110,8 +111,128 @@ duppage(envid_t envid, unsigned pn)
 envid_t
 fork(void)
 {
+#if 1
 	// LAB 4: Your code here.
-	panic("fork not implemented");
+    // Add by Zhou 
+    envid_t envid;
+
+    set_pgfault_handler(pgfault);
+
+    envid = sys_exofork();
+
+    if (envid < 0) {
+
+        panic("sys_exofork failed!\n");
+    }else if (0 == envid) {
+    
+        thisenv = &envs[ENVX(sys_getenvid())];
+        return 0;
+    }
+
+    uint8_t *addr = NULL;
+    extern unsigned char end[];
+    cprintf("end: 0x%08x, UTOP: 0x%08x\n", end, UTOP);
+    int page_num = 0;
+    for (addr = (uint8_t *)UTEXT; addr < (uint8_t *)end; addr += PGSIZE) {
+
+        if (uvpd[PDX(addr)] & PTE_P)
+            page_num++;
+    
+        if ((uvpd[PDX(addr)] & PTE_P) && (uvpt[PGNUM(addr)] & PTE_P) \
+            && (uvpt[PGNUM(addr)] & PTE_U)) {
+        
+            duppage(envid, PGNUM(addr));
+        }
+    }
+    cprintf("page_num: %d\n", page_num);
+    duppage(envid, PGNUM(ROUNDDOWN(&addr, PGSIZE)));
+
+    if (sys_page_alloc(envid, (void *)(UXSTACKTOP - PGSIZE), PTE_P | PTE_U | PTE_W))
+        panic("sys_page_alloc for child exception failed!\n");
+
+    extern void _pgfault_upcall();
+    sys_env_set_pgfault_upcall(envid, _pgfault_upcall);
+
+    if (sys_env_set_status(envid, ENV_RUNNABLE))
+        panic("fork set child env status failed!\n");
+
+    return envid;
+#else
+    extern void _pgfault_upcall(void);
+    envid_t myenvid = sys_getenvid();
+    envid_t envid;
+    uint32_t i, j, pn;
+
+    // set page fault handler
+    set_pgfault_handler(pgfault);
+
+    // create a child
+    if ((envid = sys_exofork()) < 0) {
+    
+        return -1;
+    }
+
+    // child
+    if (envid == 0) {
+    
+        thisenv = &envs[ENVX(sys_getenvid())];
+        
+        return envid;
+    }
+
+    // copy address space to child
+    int page_num = 0;
+    for (i = PDX(UTEXT); i < PDX(UXSTACKTOP); i++) {
+    
+        if (uvpd[i] & PTE_P) {
+        
+            for (j = 0; j < NPTENTRIES; j++) {
+                page_num++;
+                pn = PGNUM(PGADDR(i, j, 0));
+                if (pn == PGNUM(UXSTACKTOP - PGSIZE)) {
+                
+                    break;
+                }
+
+                if (uvpt[pn] & PTE_P) {
+                
+                    duppage(envid, pn);
+                }
+            }
+        }
+    }
+    cprintf("page_num: %d\n", page_num);
+
+    if (sys_page_alloc(envid, (void *)(UXSTACKTOP - PGSIZE), PTE_U | PTE_P | PTE_W) < 0) {
+    
+        return -1;
+    }
+
+    if (sys_page_map(envid, (void *)(UXSTACKTOP - PGSIZE), myenvid, PFTEMP, PTE_U | PTE_P | PTE_W) < 0) {
+    
+        return -1;
+    }
+
+    memmove((void *)(UXSTACKTOP - PGSIZE), PFTEMP, PGSIZE);
+
+    if (sys_page_unmap(myenvid, PFTEMP) < 0) {
+    
+        return -1;
+    }
+
+    if (sys_env_set_pgfault_upcall(envid, _pgfault_upcall) < 0) {
+    
+        return -1;
+    }
+
+    if (sys_env_set_status(envid, ENV_RUNNABLE) < 0) {
+    
+        return -1;
+    }
+
+    return envid;
+
+#endif
 }
 
 // Challenge!

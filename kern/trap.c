@@ -234,11 +234,11 @@ trap_dispatch(struct Trapframe *tf)
     
     case T_PGFLT:
         page_fault_handler(tf);
-        break;
+        return;
 
     case T_BRKPT:
         monitor(tf);
-        break;
+        return;
 
     case T_SYSCALL:
         ret_code = syscall(tf->tf_regs.reg_eax,
@@ -249,7 +249,6 @@ trap_dispatch(struct Trapframe *tf)
                            tf->tf_regs.reg_esi);
         tf->tf_regs.reg_eax = ret_code;
         return;
-        break;
 
     default:
 	    // Unexpected trap: The user process or the kernel has a bug.
@@ -413,6 +412,8 @@ page_fault_handler(struct Trapframe *tf)
     else
         exstack = UXSTACKTOP - sizeof(struct UTrapframe);
 
+    user_mem_assert(curenv, (void *)exstack, sizeof(struct UTrapframe), PTE_U | PTE_W | PTE_P);
+
     utf = (struct UTrapframe *)exstack;
     utf->utf_fault_va = fault_va;
     utf->utf_err = tf->tf_err;
@@ -421,15 +422,10 @@ page_fault_handler(struct Trapframe *tf)
     utf->utf_eflags = tf->tf_eflags;
     utf->utf_esp = tf->tf_esp;
 
-    user_mem_check(curenv, (void *)exstack, sizeof(struct UTrapframe), PTE_U | PTE_W | PTE_P);
-
     tf->tf_esp = (uintptr_t)utf;
     tf->tf_eip = (uintptr_t)curenv->env_pgfault_upcall;
 
     env_run(curenv);
-
-    panic("Unreachable code!\n");
-
 destroy:
 	// Destroy the environment that caused the fault.
 	cprintf("[%08x] user fault va %08x ip %08x\n",
