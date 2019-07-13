@@ -4,6 +4,7 @@
 #include <inc/memlayout.h>
 #include <inc/trap.h>
 
+#include <kern/picirq.h>
 
 
 ###################################################################
@@ -67,6 +68,12 @@ TRAPHANDLER(SIMD_floating_point_error_isr, T_SIMDERR)
 
 TRAPHANDLER_NOEC(syscall_isr, T_SYSCALL)
 
+TRAPHANDLER_NOEC(timer_isr, IRQ_OFFSET + IRQ_TIMER)
+TRAPHANDLER_NOEC(keyboard_isr, IRQ_OFFSET + IRQ_KBD)
+TRAPHANDLER_NOEC(serial_isr, IRQ_OFFSET + IRQ_SERIAL)
+TRAPHANDLER_NOEC(spurious_isr, IRQ_OFFSET + IRQ_SPURIOUS)
+TRAPHANDLER_NOEC(ide_isr, IRQ_OFFSET + IRQ_IDE)
+TRAPHANDLER_NOEC(error_isr, IRQ_OFFSET + IRQ_ERROR)
 
 
 
