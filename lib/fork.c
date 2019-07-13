@@ -137,7 +137,7 @@ fork(void)
             duppage(envid, PGNUM(addr));
         }
     }
-    
+
     if (sys_page_alloc(envid, (void *)(UXSTACKTOP - PGSIZE), PTE_P | PTE_U | PTE_W))
         panic("sys_page_alloc for child exception failed!\n");
 

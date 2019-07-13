@@ -33,22 +33,20 @@ sched_yield(void)
 
 	// LAB 4: Your code here.
     // Add by Zhou
-    idle = thiscpu->cpu_env;
-    index = (idle != NULL) ? (idle - envs) : 0;
+    idle = curenv;
+    index = idle ? (idle - envs) : 0;
 
-    for (;i != index || first; i = (i + 1) % NENV, first = false) {
+    for (i = index; i != index || first; i = (i + 1) % NENV, first = false) {
     
         if (envs[i].env_status == ENV_RUNNABLE) {
         
             env_run(&envs[i]);
-            return;
         }
     }
 
     if (idle && idle->env_status == ENV_RUNNING) {
     
         env_run(idle);
-        return;
     }
 
 	// sched_halt never returns
@@ -96,7 +94,7 @@ sched_halt(void)
 		"pushl $0\n"
 		"pushl $0\n"
 		// Uncomment the following line after completing exercise 13
-		//"sti\n"
+		"sti\n"
 		"1:\n"
 		"hlt\n"
 		"jmp 1b\n"

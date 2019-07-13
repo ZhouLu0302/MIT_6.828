@@ -51,6 +51,13 @@ void SIMD_floating_point_error_isr(void);
 
 void syscall_isr(void);
 
+void timer_isr(void);
+void keyboard_isr(void);
+void serial_isr(void);
+void spurious_isr(void);
+void ide_isr(void);
+void error_isr(void);
+
 static const char *trapname(int trapno)
 {
 	static const char * const excnames[] = {
@@ -110,7 +117,15 @@ trap_init(void)
     SETGATE(idt[T_ALIGN],   0, GD_KT, alignment_check_isr,           0);
     SETGATE(idt[T_MCHK],    0, GD_KT, machine_check_isr,             0);
     SETGATE(idt[T_SIMDERR], 0, GD_KT, SIMD_floating_point_error_isr, 0);
+
     SETGATE(idt[T_SYSCALL], 0, GD_KT, syscall_isr,                   3);
+    
+    SETGATE(idt[IRQ_OFFSET + IRQ_TIMER],    0, GD_KT, timer_isr,     0);
+    SETGATE(idt[IRQ_OFFSET + IRQ_KBD],      0, GD_KT, keyboard_isr,  0);
+    SETGATE(idt[IRQ_OFFSET + IRQ_SERIAL],   0, GD_KT, serial_isr,    0);
+    SETGATE(idt[IRQ_OFFSET + IRQ_SPURIOUS], 0, GD_KT, spurious_isr,  0);
+    SETGATE(idt[IRQ_OFFSET + IRQ_IDE],      0, GD_KT, ide_isr,       0);
+    SETGATE(idt[IRQ_OFFSET + IRQ_ERROR],    0, GD_KT, error_isr,     0);
 
 	// Per-CPU setup 
 	trap_init_percpu();
@@ -251,6 +266,7 @@ trap_dispatch(struct Trapframe *tf)
         return;
 
     default:
+#if 0
 	    // Unexpected trap: The user process or the kernel has a bug.
 	    print_trapframe(tf);
 
@@ -261,6 +277,7 @@ trap_dispatch(struct Trapframe *tf)
 		    env_destroy(curenv);
 		    return;
 	    }
+#endif
         break;
     }
 
@@ -276,6 +293,14 @@ trap_dispatch(struct Trapframe *tf)
 	// Handle clock interrupts. Don't forget to acknowledge the
 	// interrupt using lapic_eoi() before calling the scheduler!
 	// LAB 4: Your code here.
+    // Add by Zhou
+    if (tf->tf_trapno == IRQ_OFFSET + IRQ_TIMER) {
+    
+        lapic_eoi();
+        sched_yield();
+        return;
+    }
+    
 
 	// Unexpected trap: The user process or the kernel has a bug.
 	print_trapframe(tf);

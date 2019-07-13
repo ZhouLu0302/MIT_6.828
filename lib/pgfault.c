@@ -24,25 +24,20 @@ void (*_pgfault_handler)(struct UTrapframe *utf);
 void
 set_pgfault_handler(void (*handler)(struct UTrapframe *utf))
 {
-	int r;
-
 	if (_pgfault_handler == 0) {
 		// First time through!
 		// LAB 4: Your code here.
         // Add by Zhou
         void *addr = (void *)(UXSTACKTOP - PGSIZE);
 
-        r = sys_page_alloc(thisenv->env_id, addr, PTE_W | PTE_U | PTE_P);
-        
-        if (r != 0)
+        if (sys_page_alloc(thisenv->env_id, addr, PTE_W | PTE_U | PTE_P))
             panic("No memory for UxStack!\n");
+
+        if (sys_env_set_pgfault_upcall(thisenv->env_id, _pgfault_upcall))
+            panic("sys_env_set_pgfault_upcall is not right!\n");
 	}
 
 	// Save handler pointer for assembly to call.
 	_pgfault_handler = handler;
 
-    r = sys_env_set_pgfault_upcall(sys_getenvid(), _pgfault_upcall);
-
-    if (r < 0)
-        panic("sys_env_set_pgfault_upcall is not right!\n");
 }
