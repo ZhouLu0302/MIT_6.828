@@ -126,6 +126,7 @@ duppage(envid_t envid, unsigned pn)
 envid_t
 fork(void)
 {
+#if 0
 	// LAB 4: Your code here.
     // Add by Zhou 
     envid_t envid;
@@ -163,6 +164,57 @@ fork(void)
         panic("fork set child env status failed!\n");
 
     return envid;
+#else
+    // LAB 4: Your code here.
+	envid_t envid;
+	uint32_t addr;
+	int i, j, pn, r;
+	extern void _pgfault_upcall(void);
+
+	set_pgfault_handler(pgfault);
+	if ((envid = sys_exofork()) < 0) {
+		panic("sys_exofork failed: %e", envid);
+		return envid;
+	}
+	if (envid == 0) {
+		thisenv = &envs[ENVX(sys_getenvid())];
+		return 0;
+	}
+
+	for (i = PDX(UTEXT); i < PDX(UXSTACKTOP); i++) {
+		if (uvpd[i] & PTE_P) {
+			for (j = 0; j < NPTENTRIES; j++) {
+				pn = PGNUM(PGADDR(i, j, 0));
+				if (pn == PGNUM(UXSTACKTOP - PGSIZE))
+					break;
+				if (uvpt[pn] & PTE_P)
+					duppage(envid, pn);
+			}
+		}
+	
+	}
+	
+	if ((r = sys_page_alloc(envid, (void *)(UXSTACKTOP - PGSIZE), PTE_P | PTE_U | PTE_W)) < 0) {
+		panic("fork: page alloc failed %e", r);
+		return r;
+	}
+	if ((r = sys_page_map(envid, (void *)(UXSTACKTOP - PGSIZE), thisenv->env_id, PFTEMP, PTE_P | PTE_U | PTE_W)) < 0) {
+		panic("fork: page map failed %e", r);
+		return r;
+	}
+	memmove((void *)(UXSTACKTOP - PGSIZE), PFTEMP, PGSIZE);
+	if ((r = sys_page_unmap(thisenv->env_id, PFTEMP)) < 0) {
+		panic("fork: page unmap failed %e", r);
+		return r;
+	}
+	sys_env_set_pgfault_upcall(envid, _pgfault_upcall);
+	if ((r = sys_env_set_status(envid, ENV_RUNNABLE)) < 0) {
+		panic("fork: set child env status failed %e", r);
+		return r;
+	}
+
+	return envid;
+#endif
 }
 
 // Challenge!

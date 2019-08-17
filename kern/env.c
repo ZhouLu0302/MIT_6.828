@@ -382,6 +382,7 @@ load_icode(struct Env *e, uint8_t *binary)
 
 	// LAB 3: Your code here.
     // Add by Zhou
+    cprintf("load_icode for env:%x, env_pgdir va=%x, pa=%x\n", e->env_id, e->env_pgdir, PADDR(e->env_pgdir));
     struct Elf *header = (struct Elf *)binary;
 
     if (header->e_magic != ELF_MAGIC)
@@ -592,7 +593,5 @@ env_run(struct Env *e)
 
     unlock_kernel();
     env_pop_tf(&curenv->env_tf);
-
-	panic("env_run not yet implemented");
 }
 

@@ -152,10 +152,12 @@ sys_env_set_trapframe(envid_t envid, struct Trapframe *tf)
     if ((r = envid2env(envid, &e, 1)) < 0)
         return -E_BAD_ENV;
 
-    user_mem_assert(e, tf, sizeof(struct Trapframe), PTE_U);
+    // user_mem_assert(e, tf, sizeof(struct Trapframe), PTE_U);
     e->env_tf = *tf;
-    e->env_tf.tf_cs |= 0x03;
     e->env_tf.tf_eflags |= FL_IF;
+    e->env_tf.tf_eflags &= ~FL_IOPL_MASK;
+    // e->env_tf.tf_cs |= 0x03;
+    // e->env_tf.tf_eflags |= FL_IF;
 
     return 0;
 }

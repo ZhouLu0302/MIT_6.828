@@ -65,12 +65,13 @@ alloc_block(void)
     // Add by Zhou
     uint32_t blockno = 0;
 
-    for (blockno = 0; blockno < super->s_nblocks; blockno++) {
+    for (blockno = 3; blockno < super->s_nblocks; blockno++) {
     
         if (block_is_free(blockno)) {
         
             bitmap[blockno/32] ^= 1 << (blockno%32);
             flush_block(bitmap);
+            cprintf("alloc block: %d\n", blockno);
             
             return blockno;
         }
@@ -155,29 +156,27 @@ file_block_walk(struct File *f, uint32_t filebno, uint32_t **ppdiskbno, bool all
 
     if (filebno < NDIRECT) {
     
-        if (ppdiskbno)
-            *ppdiskbno = f->f_direct + filebno;
-
-        return 0;
-    }
-
-    if (!alloc && !f->f_indirect) {
+        *ppdiskbno = f->f_direct + filebno;
+    }else {
     
-        return -E_NOT_FOUND;
+        if (!f->f_indirect) {
+        
+            if (alloc) {
+            
+                int blockno = alloc_block();
+                if (blockno < 0)
+                    return -E_NO_DISK;
+
+                memset(diskaddr(blockno), 0, BLKSIZE);
+                f->f_indirect = blockno;
+            }else {
+            
+                return -E_NOT_FOUND;
+            }
+        }
+
+        *ppdiskbno = (uint32_t *)diskaddr(f->f_indirect) + (filebno - NDIRECT);
     }
-
-    if (!f->f_indirect) {
-    
-        if ((r = alloc_block()) < 0)
-            return -E_NO_DISK;
-
-        f->f_indirect = r;
-        memset(diskaddr(r), 0, BLKSIZE);
-        flush_block(diskaddr(r));
-    }
-
-    if (ppdiskbno)
-        *ppdiskbno = (uint32_t *)diskaddr(f->f_indirect) + filebno - NDIRECT;
 
     return 0;
 }
@@ -208,7 +207,7 @@ file_get_block(struct File *f, uint32_t filebno, char **blk)
 
         *ppdiskbno = r;
         memset(diskaddr(r), 0, BLKSIZE);
-        flush_block(diskaddr(r));
+        //flush_block(diskaddr(r));
     }
 
     *blk = diskaddr(*ppdiskbno);
