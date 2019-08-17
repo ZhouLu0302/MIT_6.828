@@ -162,6 +162,7 @@ trap_init_percpu(void)
     // Add by Zhou
     thiscpu->cpu_ts.ts_esp0 = KSTACKTOP - cpunum() * (KSTKSIZE + KSTKGAP);
     thiscpu->cpu_ts.ts_ss0 = GD_KD;
+    thiscpu->cpu_ts.ts_iomb = sizeof(struct Taskstate);
 
 	// Initialize the TSS slot of the gdt.
     gdt[(GD_TSS0 >> 3) + cpunum()] = SEG16(STS_T32A, (uint32_t)(&thiscpu->cpu_ts),
@@ -264,7 +265,7 @@ trap_dispatch(struct Trapframe *tf)
                            tf->tf_regs.reg_esi);
         tf->tf_regs.reg_eax = ret_code;
         return;
-
+#if 0
     default:
 #if 0
 	    // Unexpected trap: The user process or the kernel has a bug.
@@ -279,6 +280,7 @@ trap_dispatch(struct Trapframe *tf)
 	    }
 #endif
         break;
+#endif
     }
 
 	// Handle spurious interrupts
@@ -301,6 +303,21 @@ trap_dispatch(struct Trapframe *tf)
         return;
     }
     
+
+	// Handle keyboard and serial interrupts.
+	// LAB 5: Your code here.
+    // Add by Zhou
+    if (tf->tf_trapno == IRQ_OFFSET + IRQ_KBD) {
+    
+        kbd_intr();
+        return;
+    }
+
+    if (tf->tf_trapno == IRQ_OFFSET + IRQ_SERIAL) {
+    
+        serial_intr();
+        return;
+    }
 
 	// Unexpected trap: The user process or the kernel has a bug.
 	print_trapframe(tf);
@@ -372,7 +389,6 @@ trap(struct Trapframe *tf)
 	else
 		sched_yield();
 }
-
 
 void
 page_fault_handler(struct Trapframe *tf)
@@ -458,4 +474,3 @@ destroy:
 	print_trapframe(tf);
 	env_destroy(curenv);
 }
-

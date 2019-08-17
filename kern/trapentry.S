@@ -87,8 +87,8 @@ pushl %es
 pushal
 
 movl $GD_KD, %eax
-movw %ax, %ds
-movw %ax, %es
+movl %eax, %ds
+movl %eax, %es
 
 push %esp
 call trap

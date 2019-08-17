@@ -84,6 +84,8 @@ static void check_page_installed_pgdir(void);
 // If we're out of memory, boot_alloc should panic.
 // This function may ONLY be used during initialization,
 // before the page_free_list list has been set up.
+// Note that when this function is called, we are still using entry_pgdir,
+// which only maps the first 4MB of physical memory.
 static void *
 boot_alloc(uint32_t n)
 {
@@ -166,6 +168,9 @@ mem_init(void)
 	//////////////////////////////////////////////////////////////////////
 	// Make 'envs' point to an array of size 'NENV' of 'struct Env'.
 	// LAB 3: Your code here.
+    // Add by Zhou
+    envs = (struct Env *)boot_alloc(NENV * sizeof(struct Env));
+    memset((void *)envs, 0, NENV * sizeof(struct Env));
 
 	//////////////////////////////////////////////////////////////////////
 	// Now that we've allocated the initial kernel data structures, we set
@@ -200,8 +205,6 @@ mem_init(void)
 	//    - envs itself -- kernel RW, user NONE
 	// LAB 3: Your code here.
     // Add by Zhou
-    envs = (struct Env *)boot_alloc(NENV * sizeof(struct Env));
-    memset((void *)envs, 0, NENV * sizeof(struct Env));
     boot_map_region(kern_pgdir, UENVS, PTSIZE, PADDR(envs), PTE_U | PTE_P);
 
 	//////////////////////////////////////////////////////////////////////
@@ -607,9 +610,10 @@ page_remove(pde_t *pgdir, void *va)
     pte_t *pte = NULL;
     struct PageInfo *page = page_lookup(pgdir, va, &pte);
 
-    if (page != NULL)
-        page_decref(page);
+    if (!page || !(*pte & PTE_P)) 
+        return;
 
+    page_decref(page);
     *pte = 0;
     tlb_invalidate(pgdir, va);
 }
