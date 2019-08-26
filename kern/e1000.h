@@ -10,8 +10,13 @@
  * Tx buffer
  */
 #define TX_DESC_NUM         32
-//#define TXDESCS         32
 #define TX_PKT_SIZE         1518
+
+/*
+ * Rx buffer
+ */
+#define RX_DESC_NUM         128
+#define RX_PKT_SIZE         1518
 
 /*
  * Registers
@@ -27,6 +32,20 @@
 #define E1000_TXD_STAT_DD   0x00000001 /* Descriptor done                      */
 #define E1000_TXD_CMD_EOP   0x00000001 /* End of packet                        */
 #define E1000_TXD_CMD_RS    0x00000008 /* Report status                        */
+
+#define E1000_RCTL          0x00100
+#define E1000_RCTL_EN       0x00000002 /* Enable                               */
+#define E1000_RCTL_BAM      0x00008000 /* Broadcast enable                     */
+#define E1000_RCTL_SECRC    0x04000000 /* Strip ethernet CRC                   */
+#define E1000_RDBAL         0x02800    /* Rx descriptor base address low - RW  */
+#define E1000_RDBAH         0x02804    /* Rx descriptor base address high - RW */
+#define E1000_RDLEN         0x02808    /* Rx descriptor length - RW            */
+#define E1000_RDH           0x02810    /* Rx descriptor head                   */
+#define E1000_RDT           0x02818    /* Rx descriptor tail                   */
+#define E1000_RA            0x05400    /* Receive address - RW array           */
+#define E1000_RAH_AV        0x80000000 /* Receive descriptor valid             */
+#define E1000_RXD_STAT_DD   0x01       /* Descriptor done                      */
+#define E1000_RXD_STAT_EOP  0x02       /* End of packet                        */
 
 
 enum {
@@ -91,9 +110,40 @@ struct e1000_tdh {
     uint16_t rsv;
 };
 
+/*
+ * receive descriptor related
+ */
+struct e1000_rx_desc {
+	uint64_t addr;
+	uint16_t length;
+	uint16_t chksum;
+	uint8_t status;
+	uint8_t errors;
+	uint16_t special;
+}__attribute__((packed));
+
+struct e1000_rdlen {
+	unsigned zero: 7;
+	unsigned len: 13;
+	unsigned rsv: 12;
+};
+
+struct e1000_rdh {
+	uint16_t rdh;
+	uint16_t rsv;
+};
+
+struct e1000_rdt {
+	uint16_t rdt;
+	uint16_t rsv;
+};
+
 
 int e1000_attachfn(struct pci_func *pcif);
 static void e1000_transmit_init();
 int e1000_transmit(void *data, size_t len);
+
+static void e1000_receive_init();
+int e1000_receive(void *addr, size_t *len);
 
 #endif  // SOL >= 6
